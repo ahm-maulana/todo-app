@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onBeforeMount, onMounted, onUpdated, ref, watch } from 'vue'
+import draggable from 'vuedraggable'
 
-onMounted(() => document.title = 'Todo List App')
+onMounted(() => document.title = 'Todo App')
 
 // dark mode
 const darkMode = ref(JSON.parse(localStorage.getItem('darkMode')) || false)
@@ -57,13 +58,18 @@ const deleteCompletedTask = () => {
 // filter task
 const filter = ref('all')
 
-const filterTodos = computed(() => {
-  if(filter.value == 'active') {
-    return todos.value.filter(item => item.isDone != true)
-  } else if(filter.value == 'completed'){
-    return todos.value.filter(item => item.isDone == true)
-  } else {
-    return todos.value
+const filterTodos = computed({
+  get() {
+    if(filter.value == 'active') {
+      return todos.value.filter(item => item.isDone != true)
+    } else if(filter.value == 'completed'){
+      return todos.value.filter(item => item.isDone == true)
+    } else {
+      return todos.value
+    }    
+  },
+  set(newValue) {
+    todos.value = newValue
   }
 })
 
@@ -110,64 +116,69 @@ const items = computed(() => {
           <div class="space-y-4">
 
             <!-- input todo list -->
-            <div class="grid grid-cols-12 w-full h-12 bg-white dark:bg-[#25273C] rounded-md">
+            <div class="grid grid-cols-12 w-full py-3 bg-white dark:bg-[#25273C] rounded-md">
               <div class="flex col-span-2 justify-center items-center">
                 <div class="bg-transparent w-5 h-5 md:w-7 md:h-7 border border-gray-200 dark:border-[#4D5066] rounded-full"></div>
               </div>
-              <input v-model="inputTodo" @keypress.enter="addTodo" type="text" placeholder="create a new todo..." class="col-span-8 text-xs md:text-base bg-transparent text-[#484B6A] dark:text-[#CACDE8] focus:outline-none placeholder:text-xs md:placeholder:text-base" autofocus>
+              <input v-model="inputTodo" @keyup.enter="addTodo" type="text" placeholder="create a new todo..." class="col-span-8 text-sm md:text-base bg-transparent text-[#484B6A] dark:text-[#CACDE8] focus:outline-none placeholder:text-sm md:placeholder:text-base" autofocus>
             </div>
 
             <!-- todo list -->
-            <div class="grid grid-cols-1 w-full bg-white dark:bg-[#25273C] rounded-md shadow-xl divide-y-2 dark:divide-[#393A4C]">
+            <div class="grid grid-cols-1 w-full bg-white dark:bg-[#25273C] rounded-md shadow-xl">
 
-              <div v-if="filterTodos.length === 0" class="flex items-center justify-center h-12">
-                <p class="text-xs md:text-base text-[#9394A5] dark:text-[#4D5066]">no task!</p>
-              </div>
 
-              <div v-for="todo in filterTodos" :key="todo.id" class="grid grid-cols-12 items-center h-12">
-                
-                <div class="flex col-span-2 justify-center items-center">
-                  <button @click="updateTodo(todo)">
-                    <div class="dark:border-[#4D5066] w-5 h-5 md:w-7 md:h-7 border border-gray-200 rounded-full" :class="[todo.isDone ? 'bg-blue-500' : 'bg-transparent']">
+              <ul>
+                <li v-if="filterTodos.length === 0" class="flex items-center justify-center py-3">
+                  <p class="text-sm md:text-base text-[#9394A5] dark:text-[#4D5066]">no task!</p>
+                </li>
+                <draggable v-model="filterTodos" handle=".handle" item-key="id" >
+                  <template #item="{element, index}">
+                    <li class="grid grid-cols-12 items-center py-3 bg-white dark:bg-[#25273C] border-y dark:border-[#393A4C]" :class="{ 'rounded-t-md' : index === 0 }">
+                      <div class="flex col-span-2 justify-center items-center">
+                        <button @click="updateTodo(element)">
+                          <div class="dark:border-[#4D5066] hover:border-blue-500 dark:hover:border-blue-500 w-5 h-5 md:w-7 md:h-7 border border-gray-200 rounded-full" :class="[element.isDone ? 'bg-blue-500' : 'bg-transparent']">
+                            
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-full h-full text-white" v-if="element.isDone">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+
+                          </div>
+                        </button>
+                      </div>
                       
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-full h-full text-white" v-if="todo.isDone">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <p @click="updateTodo(element)" class="handle col-span-8 text-sm md:text-base cursor-pointer" :class="[element.isDone ? 'line-through text-[#E4E5F1] dark:text-[#4D5066]' : 'text-[#484B6A] dark:text-[#CACDE8]']">{{ element.task }}</p>
+                      
+                      <div class="flex col-span-2 justify-center items-center">
+                        <button @click="deleteTask(element)">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 md:w-7 md:h-7 text-[#484B6A]">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </li>
+                  </template>
+                </draggable>
 
-                    </div>
-                  </button>
-                </div>
-                
-                <p class="col-span-8 text-xs md:text-base" :class="[todo.isDone ? 'line-through text-[#E4E5F1] dark:text-[#4D5066]' : 'text-[#484B6A] dark:text-[#CACDE8]']">{{ todo.task }}</p>
-                
-                <div class="flex col-span-2 justify-center items-center">
-                  <button @click="deleteTask(todo)">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 md:w-7 md:h-7 text-[#484B6A]">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                
-              </div>
-
-              <!-- List Footer -->
-              <div class="flex justify-between items-center h-12 text-xs md:text-sm text-[#9394A5] dark:text-[#4D5066] px-4">
-                <p class="col-start-2">{{ items }} items left</p>
-                <p class="col-span-6">
-                  <button @click="deleteCompletedTask">Clear Completed</button>
-                </p>
-              </div>
+                <!-- List Footer -->
+                <li class="px-4 flex justify-between items-center py-3 text-xs md:text-sm text-[#9394A5] dark:text-[#4D5066] border-t dark:border-[#393A4C]">
+                  <p class="col-start-2">{{ items }} items left</p>
+                  <p class="col-span-6">
+                    <button class="hover:text-[#484B6A] dark:hover:text-white" @click="deleteCompletedTask">Clear Completed</button>
+                  </p>
+                </li>
+              </ul>
+              
             </div>
 
             <!-- filter todo list -->
-            <div class="flex justify-center items-center gap-4 text-sm text-[#9394A5] dark:text-[#4D5066] font-bold w-full h-12 bg-white dark:bg-[#25273C] rounded-md shadow-xl">
-              <button :class="{ 'text-[#3F7EFD]' : filter=='all' }" @click="filter = 'all'">All</button>
-              <button :class="{ 'text-[#3F7EFD]' : filter=='active' }" @click="filter = 'active'">Active</button>
-              <button :class="{ 'text-[#3F7EFD]' : filter=='completed' }" @click="filter = 'completed'">Completed</button>
+            <div class="flex justify-center items-center gap-4 text-sm text-[#9394A5] dark:text-[#4D5066] font-bold w-full py-3 bg-white dark:bg-[#25273C] rounded-md shadow-xl">
+              <button class="hover:text-[#484B6A] dark:hover:text-white" :class="{ 'text-[#3F7EFD]' : filter=='all' }" @click="filter = 'all'">All</button>
+              <button class="hover:text-[#484B6A] dark:hover:text-white" :class="{ 'text-[#3F7EFD]' : filter=='active' }" @click="filter = 'active'">Active</button>
+              <button class="hover:text-[#484B6A] dark:hover:text-white" :class="{ 'text-[#3F7EFD]' : filter=='completed' }" @click="filter = 'completed'">Completed</button>
             </div>
           </div>
 
-          <p class="text-xs md:text-sm text-[#9394A5] text-center mt-10">Drag and drop to reorder list</p>
+          <p class="text-sm text-[#9394A5] text-center mt-10">Drag and drop to reorder list</p>
         </section>
       </div>
     </div>
